@@ -20,6 +20,7 @@ from lerobot.robots import RobotConfig
 
 class ActionType(Enum):
     CARTESIAN_VELOCITY = "cartesian_velocity"
+    CARTESIAN_VELOCITY_TWIST_MSG = "cartesian_velocity_twist_msg"
     JOINT_POSITION = "joint_position"
     JOINT_TRAJECTORY = "joint_trajectory"
 
@@ -27,6 +28,10 @@ class ActionType(Enum):
 class GripperActionType(Enum):
     TRAJECTORY = "trajectory"  # Use JointTrajectoryController for gripper
     ACTION = "action"  # Use GripperActionClient
+
+class GripperType(Enum):
+    PARALLEL_GRIPPER = "parallel_gripper"
+    GRIPPER = "gripper"
 
 
 @dataclass
@@ -62,6 +67,7 @@ class ROS2InterfaceConfig:
     gripper_close_position: float = 1.0
 
     gripper_action_type: GripperActionType = GripperActionType.TRAJECTORY
+    gripper_type: GripperType = GripperType.GRIPPER
 
 
 @dataclass

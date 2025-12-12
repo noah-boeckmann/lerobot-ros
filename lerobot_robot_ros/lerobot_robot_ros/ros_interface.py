@@ -17,8 +17,9 @@ import threading
 import time
 
 import rclpy
-from control_msgs.action import GripperCommand
+from control_msgs.action import ParallelGripperCommand, GripperCommand
 from lerobot.utils.errors import DeviceNotConnectedError
+from rclpy import qos
 from rclpy.action import ActionClient
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import Executor, SingleThreadedExecutor
@@ -27,8 +28,9 @@ from rclpy.publisher import Publisher
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Float64MultiArray
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
+from geometry_msgs.msg import TwistStamped
 
-from .config import ActionType, GripperActionType, ROS2InterfaceConfig
+from .config import ActionType, GripperActionType, GripperType, ROS2InterfaceConfig
 from .moveit_servo import MoveIt2Servo
 
 logger = logging.getLogger(__name__)
@@ -85,19 +87,41 @@ class ROS2Interface:
                 frame_id=self.config.base_link,
                 callback_group=ReentrantCallbackGroup(),
             )
+        elif self.action_type == ActionType.CARTESIAN_VELOCITY_TWIST_MSG:
+            self.twist_pub = self.robot_node.create_publisher(
+             TwistStamped,
+             "/servo_node/delta_twist_cmds",
+             qos.QoSProfile(
+                 durability=qos.QoSDurabilityPolicy.VOLATILE,
+                 reliability=qos.QoSReliabilityPolicy.RELIABLE,
+                 history=qos.QoSHistoryPolicy.KEEP_ALL
+             ))
+            self._twist_msg = TwistStamped()
 
         if self.config.gripper_action_type == GripperActionType.TRAJECTORY:
             self.gripper_traj_pub = self.robot_node.create_publisher(
                 JointTrajectory, "/gripper_controller/joint_trajectory", 10
             )
         else:
-            self.gripper_action_client = ActionClient(
-                self.robot_node,
-                GripperCommand,
-                "/gripper_controller/gripper_cmd",
-                callback_group=ReentrantCallbackGroup(),
-            )
-            self._goal_msg = GripperCommand.Goal()
+            if self.config.gripper_type == GripperType.GRIPPER:
+                self.gripper_action_client = ActionClient(
+                    self.robot_node,
+                    GripperCommand,
+                    "/gripper_controller/gripper_cmd",
+                    callback_group=ReentrantCallbackGroup(),
+                )
+                self._goal_msg = GripperCommand.Goal()
+            elif self.config.gripper_type == GripperType.PARALLEL_GRIPPER:
+                self.gripper_action_client = ActionClient(
+                    self.robot_node,
+                    ParallelGripperCommand,
+                    "/gripper_action_controller/gripper_cmd",
+                    callback_group=ReentrantCallbackGroup(),
+                )
+                self.gripper_action_client.wait_for_server()    
+                self._goal_msg = ParallelGripperCommand.Goal()
+            else:
+                self.robot_node.get_logger().warn("No GripperType defined, how did this happen?")
 
         self.joint_state_sub = self.robot_node.create_subscription(
             JointState,
@@ -162,13 +186,31 @@ class ROS2Interface:
             self.pos_cmd_pub.publish(msg)
 
     def servo(self, linear, angular, normalize: bool = True) -> None:
-        if not self.moveit2_servo:
-            raise DeviceNotConnectedError("ROS2Interface is not connected. You need to call `connect()`.")
-
         if normalize:
             linear = [v * self.config.max_linear_velocity for v in linear]
             angular = [v * self.config.max_angular_velocity for v in angular]
-        self.moveit2_servo.servo(linear=linear, angular=angular)
+
+        if self.action_type == ActionType.CARTESIAN_VELOCITY:
+            if not self.moveit2_servo:
+                raise DeviceNotConnectedError("ROS2Interface is not connected. You need to call `connect()`.")
+
+            self.moveit2_servo.servo(linear=linear, angular=angular)
+            return
+        
+        elif self.action_type == ActionType.CARTESIAN_VELOCITY_TWIST_MSG:
+            self._twist_msg = TwistStamped()
+            self._twist_msg.header.frame_id = self.config.base_link
+            self._twist_msg.header.stamp = self.robot_node.get_clock().now().to_msg()
+            self._twist_msg.twist.linear.x = float(linear[0])
+            self._twist_msg.twist.linear.y = float(linear[1])
+            self._twist_msg.twist.linear.z = float(linear[2])
+            self._twist_msg.twist.angular.x = float(angular[0])
+            self._twist_msg.twist.angular.y = float(angular[1])
+            self._twist_msg.twist.angular.z = float(angular[2])
+            self.twist_pub.publish(self._twist_msg)
+            return
+
+
 
     def send_gripper_command(self, position: float, unnormalize: bool = True) -> bool:
         """
@@ -207,7 +249,11 @@ class ROS2Interface:
                 logger.error("Gripper action server not available")
                 return False
 
-            self._goal_msg.command.position = float(gripper_goal)
+            if self.config.gripper_type == GripperType.GRIPPER:
+                self._goal_msg.command.position = float(gripper_goal)
+            elif self.config.gripper_type == GripperType.PARALLEL_GRIPPER:
+                self._goal_msg.command.position = [float(gripper_goal)]
+
             if not (resp := self.gripper_action_client.send_goal(self._goal_msg)):
                 logger.error("Failed to send gripper command")
                 return False
@@ -259,6 +305,9 @@ class ROS2Interface:
         if self.traj_cmd_pub:
             self.traj_cmd_pub.destroy()
             self.traj_cmd_pub = None
+        if self.twist_pub:
+            self.twist_pub.destroy()
+            self.twist_pub = None
         if self.gripper_action_client:
             self.gripper_action_client.destroy()
             self.gripper_action_client = None
