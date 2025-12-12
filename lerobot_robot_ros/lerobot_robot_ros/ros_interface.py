@@ -17,8 +17,9 @@ import threading
 import time
 
 import rclpy
-from control_msgs.action import GripperCommand
+from control_msgs.action import ParallelGripperCommand, GripperCommand
 from lerobot.utils.errors import DeviceNotConnectedError
+from rclpy import qos
 from rclpy.action import ActionClient
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import Executor, SingleThreadedExecutor
@@ -28,7 +29,7 @@ from sensor_msgs.msg import JointState
 from std_msgs.msg import Float64MultiArray
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 
-from .config import ActionType, GripperActionType, ROS2InterfaceConfig
+from .config import ActionType, GripperActionType, GripperType, ROS2InterfaceConfig
 from .moveit_servo import MoveIt2Servo
 
 logger = logging.getLogger(__name__)
@@ -91,13 +92,25 @@ class ROS2Interface:
                 JointTrajectory, "/gripper_controller/joint_trajectory", 10
             )
         else:
-            self.gripper_action_client = ActionClient(
-                self.robot_node,
-                GripperCommand,
-                "/gripper_controller/gripper_cmd",
-                callback_group=ReentrantCallbackGroup(),
-            )
-            self._goal_msg = GripperCommand.Goal()
+            if self.config.gripper_type == GripperType.GRIPPER:
+                self.gripper_action_client = ActionClient(
+                    self.robot_node,
+                    GripperCommand,
+                    "/gripper_controller/gripper_cmd",
+                    callback_group=ReentrantCallbackGroup(),
+                )
+                self._goal_msg = GripperCommand.Goal()
+            elif self.config.gripper_type == GripperType.PARALLEL_GRIPPER:
+                self.gripper_action_client = ActionClient(
+                    self.robot_node,
+                    ParallelGripperCommand,
+                    "/gripper_action_controller/gripper_cmd",
+                    callback_group=ReentrantCallbackGroup(),
+                )
+                self.gripper_action_client.wait_for_server()    
+                self._goal_msg = ParallelGripperCommand.Goal()
+            else:
+                self.robot_node.get_logger().warn("No GripperType defined, how did this happen?")
 
         self.joint_state_sub = self.robot_node.create_subscription(
             JointState,
@@ -207,7 +220,11 @@ class ROS2Interface:
                 logger.error("Gripper action server not available")
                 return False
 
-            self._goal_msg.command.position = float(gripper_goal)
+            if self.config.gripper_type == GripperType.GRIPPER:
+                self._goal_msg.command.position = float(gripper_goal)
+            elif self.config.gripper_type == GripperType.PARALLEL_GRIPPER:
+                self._goal_msg.command.position = [float(gripper_goal)]
+                
             if not (resp := self.gripper_action_client.send_goal(self._goal_msg)):
                 logger.error("Failed to send gripper command")
                 return False

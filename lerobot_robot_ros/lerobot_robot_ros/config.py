@@ -28,6 +28,10 @@ class GripperActionType(Enum):
     TRAJECTORY = "trajectory"  # Use JointTrajectoryController for gripper
     ACTION = "action"  # Use GripperActionClient
 
+class GripperType(Enum):
+    PARALLEL_GRIPPER = "parallel_gripper"
+    GRIPPER = "gripper"
+
 
 @dataclass
 class ROS2InterfaceConfig:
@@ -62,6 +66,7 @@ class ROS2InterfaceConfig:
     gripper_close_position: float = 1.0
 
     gripper_action_type: GripperActionType = GripperActionType.TRAJECTORY
+    gripper_type: GripperType = GripperType.GRIPPER
 
 
 @dataclass
