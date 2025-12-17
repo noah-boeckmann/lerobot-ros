@@ -130,7 +130,7 @@ class SO101ROSConfig(ROS2Config):
         ),
     )
 
-@RobotConfig.register_subclass("UR10eSim")
+@RobotConfig.register_subclass("ur_10e_sim")
 @dataclass
 class UR10eSimConfig(ROS2Config):
     action_type: ActionType = ActionType.CARTESIAN_VELOCITY
@@ -193,10 +193,10 @@ class UR10eSimConfig(ROS2Config):
         )
     )
 
-@RobotConfig.register_subclass("UR10eReal")
+@RobotConfig.register_subclass("ur_10e_real")
 @dataclass
 class UR10eRealConfig(ROS2Config):
-    action_type: ActionType = ActionType.CARTESIAN_VELOCITY
+    action_type: ActionType = ActionType.CARTESIAN_VELOCITY_TWIST_MSG
     max_relative_target = 0.2
     
     
