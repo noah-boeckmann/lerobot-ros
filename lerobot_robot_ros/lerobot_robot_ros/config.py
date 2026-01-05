@@ -133,7 +133,7 @@ class SO101ROSConfig(ROS2Config):
 @RobotConfig.register_subclass("ur_10e_sim")
 @dataclass
 class UR10eSimConfig(ROS2Config):
-    action_type: ActionType = ActionType.CARTESIAN_VELOCITY
+    action_type: ActionType = ActionType.CARTESIAN_VELOCITY_TWIST_MSG
     max_relative_target = 0.2
     
     cameras: dict[str, CameraConfig] = field(
@@ -159,8 +159,9 @@ class UR10eSimConfig(ROS2Config):
             ),
 
             "camera3": ROS2CameraConfig(
-                topic='/world/default/model/ur/link/wrist_3_link/sensor/wrist_cam/image',
+                topic='/wrist_cam/image',
                 node_name="wrist_cam",
+                camera_type="camera",
                 rgb_encoding="passthrough",
                 fps=30,
                 width=1280,
@@ -205,7 +206,7 @@ class UR10eRealConfig(ROS2Config):
              "camera1": ROS2CameraConfig(
                  topic='/top_camera/rgb/image_raw/compressed',
                  node_name="top_cam",
-                 camera_type="camera",
+                 camera_type="compressed_camera",
                  rgb_encoding="rgb",
                  fps=30,
                  width=720,
@@ -216,7 +217,7 @@ class UR10eRealConfig(ROS2Config):
              "camera2": ROS2CameraConfig(
                  topic='/side_camera/rgb/image_raw/compressed',
                  node_name="side_cam",
-                 camera_type="camera",
+                 camera_type="compressed_camera",
                  rgb_encoding="rgb",
                  fps=30,
                  width=1280,
@@ -226,6 +227,7 @@ class UR10eRealConfig(ROS2Config):
             "camera3": ROS2CameraConfig(
                 topic='/wrist_camera/image_raw/compressed',
                 node_name="wrist_cam",
+                camera_type="compressed_camera",
                 rgb_encoding="rgb",
                 fps=30,
                 width=1280,
