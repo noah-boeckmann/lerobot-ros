@@ -15,6 +15,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 
 from lerobot.cameras import CameraConfig, Cv2Rotation
+from lerobot.cameras.configs import ColorMode
 from lerobot.robots import RobotConfig
 
 from lerobot_roscam.roscam_config import ROS2CameraConfig
@@ -142,7 +143,7 @@ class UR10eSimConfig(ROS2Config):
                 topic='/top_cam/image',
                 node_name="top_cam",
                 camera_type="camera",
-                rgb_encoding="passthrough",
+                color_mode=ColorMode.BGR, # Ugly hack to leave sim image in RGB, since lerobot-roscam assumes BGR input and simply passes the image through
                 fps=30,
                 width=1280,
                 height=720,
@@ -152,7 +153,7 @@ class UR10eSimConfig(ROS2Config):
                 topic='/side_cam/image',
                 node_name="side_cam",
                 camera_type="camera",
-                rgb_encoding="passthrough",
+                color_mode=ColorMode.BGR, # Ugly hack to leave sim image in RGB, since lerobot-roscam assumes BGR input and simply passes the image through
                 fps=30,
                 width=1280,
                 height=720,
@@ -162,7 +163,7 @@ class UR10eSimConfig(ROS2Config):
                 topic='/wrist_cam/image',
                 node_name="wrist_cam",
                 camera_type="camera",
-                rgb_encoding="passthrough",
+                color_mode=ColorMode.BGR, # Ugly hack to leave sim image in RGB, since lerobot-roscam assumes BGR input and simply passes the image through
                 fps=30,
                 width=1280,
                 height=720,
@@ -207,7 +208,7 @@ class UR10eRealConfig(ROS2Config):
                  topic='/top_camera/rgb/image_raw/compressed',
                  node_name="top_cam",
                  camera_type="compressed_camera",
-                 rgb_encoding="rgb",
+                 color_mode=ColorMode.RGB,
                  fps=30,
                  width=720,
                  height=1280,
@@ -218,7 +219,7 @@ class UR10eRealConfig(ROS2Config):
                  topic='/side_camera/rgb/image_raw/compressed',
                  node_name="side_cam",
                  camera_type="compressed_camera",
-                 rgb_encoding="rgb",
+                 color_mode=ColorMode.RGB,
                  fps=30,
                  width=1280,
                  height=720,
@@ -228,7 +229,7 @@ class UR10eRealConfig(ROS2Config):
                 topic='/wrist_camera/image_raw/compressed',
                 node_name="wrist_cam",
                 camera_type="compressed_camera",
-                rgb_encoding="rgb",
+                color_mode=ColorMode.RGB,
                 fps=30,
                 width=1280,
                 height=720,
