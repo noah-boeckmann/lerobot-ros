@@ -145,8 +145,9 @@ class UR10eSimConfig(ROS2Config):
                 camera_type="camera",
                 color_mode=ColorMode.BGR, # Ugly hack to leave sim image in RGB, since lerobot-roscam assumes BGR input and simply passes the image through
                 fps=30,
-                width=1280,
-                height=720,
+                width=360,
+                height=640,
+                rotation=Cv2Rotation.ROTATE_270
             ),
 
             "camera2": ROS2CameraConfig(
@@ -155,8 +156,8 @@ class UR10eSimConfig(ROS2Config):
                 camera_type="camera",
                 color_mode=ColorMode.BGR, # Ugly hack to leave sim image in RGB, since lerobot-roscam assumes BGR input and simply passes the image through
                 fps=30,
-                width=1280,
-                height=720,
+                width=640,
+                height=360,
             ),
 
             "camera3": ROS2CameraConfig(
@@ -165,8 +166,8 @@ class UR10eSimConfig(ROS2Config):
                 camera_type="camera",
                 color_mode=ColorMode.BGR, # Ugly hack to leave sim image in RGB, since lerobot-roscam assumes BGR input and simply passes the image through
                 fps=30,
-                width=1280,
-                height=720,
+                width=640,
+                height=360,
             ),
         }
     )
